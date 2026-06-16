@@ -12,6 +12,7 @@ export type ImageResult = {
   file_name: string;
   src: string;
   ocr_text: string;
+  ocr_html?: string | null;
   ocr_regions: OCRRegion[];
   annotated_src?: string | null;
   width?: number | null;
@@ -78,7 +79,7 @@ export type ProcessResponse = {
   timing_ms: number;
   warnings?: string[];
   validation?: Record<string, unknown>;
-  label_rule_results?: Array<Record<string, unknown>>;
+  label_rule_results?: Array<Record<string, unknown>> | Record<string, unknown>;
   signature_image?: string | null;
 };
 

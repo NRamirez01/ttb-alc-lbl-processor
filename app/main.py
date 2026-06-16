@@ -10,6 +10,9 @@ from app.routes.process import router as process_router
 from app.services.ocr_service import OCRService
 
 
+from fastapi.staticfiles import StaticFiles
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.ocr_service = OCRService()
@@ -23,6 +26,8 @@ app = FastAPI(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
 
 @app.get("/health")
 def health() -> dict:

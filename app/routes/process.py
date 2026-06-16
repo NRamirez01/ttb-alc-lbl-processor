@@ -264,7 +264,8 @@ async def submit_application_form(request: Request):
 
         ocr_result = ocr_service.extract_text_from_bytes(
             image_bytes=image_bytes,
-            file_name=getattr(image, "filename", None) or "uploaded-image.png",
+            file_name=file_name,
+            src=image_url,
         )
 
         uploaded_images.append(ocr_result.model_dump())
@@ -295,6 +296,7 @@ async def submit_application_form(request: Request):
                 ocr_result = ocr_service.extract_text_from_bytes(
                     image_bytes=image_bytes,
                     file_name=file_name,
+                    src=image_url,
                 )
 
                 uploaded_images.append(ocr_result.model_dump())

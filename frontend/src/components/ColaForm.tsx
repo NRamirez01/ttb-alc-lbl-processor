@@ -22,6 +22,13 @@ function checked(actual: string | undefined, expected: string) {
   return (actual || "").toLowerCase().includes(expected.toLowerCase());
 }
 
+function resolveAssetUrl(src?: string) {
+  if (!src) return "";
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("/static/")) return `http://127.0.0.1:8000${src}`;
+  return src;
+}
+
 export function ColaForm({ application, onSubmitted }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -108,7 +115,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
 
       const remotePreviews = (result.images ?? []).map((image, index) => ({
         id: `remote-${index}-${image.file_name || "image"}`,
-        url: image.src,
+        url: resolveAssetUrl(image.src),
         name: `label-${index + 1}`,
         file: null
       }));

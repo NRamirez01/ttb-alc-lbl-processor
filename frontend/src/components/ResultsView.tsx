@@ -98,26 +98,38 @@ export function ResultsView({ result }: Props) {
 
       <div className="results-card-grid">
         <div className="result-stat-card">
-          <div className="result-stat-label">Validation</div>
+          <div className="result-stat-label">Application Validation</div>
+          <div className="result-stat-help">
+            Compares application form values against extracted OCR text.
+          </div>
           <div className={statusClass(validation?.overall_status)}>
             {validation?.overall_status || "unknown"}
           </div>
         </div>
 
         <div className="result-stat-card">
-          <div className="result-stat-label">Label Rules</div>
+          <div className="result-stat-label">Label Compliance Checks</div>
+          <div className="result-stat-help">
+            Checks label content requirements like class, net contents, alcohol content, and warning.
+          </div>
           <div className={statusClass(labelSummary?.overall_status)}>
             {labelSummary?.overall_status || "unknown"}
           </div>
         </div>
 
         <div className="result-stat-card">
-          <div className="result-stat-label">Images</div>
+          <div className="result-stat-label">Processed Images</div>
+          <div className="result-stat-help">
+            Number of label images included in this result.
+          </div>
           <div className="result-stat-value">{result.label_images?.length ?? 0}</div>
         </div>
 
         <div className="result-stat-card">
           <div className="result-stat-label">Government Warning</div>
+          <div className="result-stat-help">
+            Whether any submitted label image contains the required warning statement.
+          </div>
           <div className={statusClass(summaryChecks.government_warning)}>
             {summaryChecks.government_warning || "unknown"}
           </div>
@@ -136,7 +148,10 @@ export function ResultsView({ result }: Props) {
       </section>
 
       <section className="results-section">
-        <h2>Label Rule Summary</h2>
+        <h2>Label Compliance Summary</h2>
+        <p className="results-section-help">
+          These checks are based on what was detected on the label images themselves.
+        </p>
         <div className="result-badge-grid">
           {Object.entries(summaryChecks).map(([key, value]) => (
             <div className="result-badge-card" key={key}>
@@ -148,7 +163,10 @@ export function ResultsView({ result }: Props) {
       </section>
 
       <section className="results-section">
-        <h2>Validation Checks</h2>
+        <h2>Application Validation Checks</h2>
+        <p className="results-section-help">
+          These checks compare fields from the application form to the OCR text extracted from the uploaded labels.
+        </p>
         <div className="results-check-list">
           {validation?.checks?.map((check, index) => (
             <div className="results-check-row" key={`${check.field}-${index}`}>
@@ -164,6 +182,9 @@ export function ResultsView({ result }: Props) {
 
       <section className="results-section">
         <h2>Per Image Details</h2>
+        <p className="results-section-help">
+          Review each image individually to see extracted text and label-specific checks.
+        </p>
         <div className="results-accordion-list">
           {groupedImages.map((item) => {
             const image = result.label_images?.find((img) => img.file_name === item.file_name);
@@ -188,7 +209,7 @@ export function ResultsView({ result }: Props) {
                   {item.categoryResult && (
                     <div>
                       <h3 className="results-subsection-title">
-                        {prettyLabel(item.categoryResult.category)}
+                        Label Content Checks: {prettyLabel(item.categoryResult.category)}
                       </h3>
                       <div className="result-badge-grid">
                         {Object.entries(item.categoryResult.checks || {}).map(([key, value]) => (
@@ -212,7 +233,7 @@ export function ResultsView({ result }: Props) {
 
                   {item.warningResult && (
                     <div>
-                      <h3 className="results-subsection-title">Government Warning</h3>
+                      <h3 className="results-subsection-title">Government Warning Check</h3>
                       <div className="result-badge-grid">
                         {Object.entries(item.warningResult.checks || {}).map(([key, value]) => (
                           <div className="result-badge-card" key={key}>

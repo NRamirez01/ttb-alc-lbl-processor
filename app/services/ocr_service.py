@@ -1,3 +1,4 @@
+from html import escape
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -70,6 +71,7 @@ class OCRService:
                 file_name=Path(image_path).name,
                 src=image_path,
                 ocr_text="",
+                ocr_html=None,
                 ocr_regions=[],
                 annotated_src=None,
             )
@@ -90,8 +92,9 @@ class OCRService:
         print(f"OCR processing time: {timer.elapsed_ms} ms")
         return image_result
 
-    def extract_text_from_bytes(self, image_bytes: bytes, file_name: str) -> ImageResult:
+    def extract_text_from_bytes(self, image_bytes: bytes, file_name: str, src: str | None = None) -> ImageResult:
         suffix = Path(file_name).suffix or ".png"
+        resolved_src = src or file_name
 
         with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(image_bytes)
@@ -105,8 +108,9 @@ class OCRService:
                 return ImageResult(
                     image_type=suffix.lower().lstrip("."),
                     file_name=file_name,
-                    src=file_name,
+                    src=resolved_src,
                     ocr_text="",
+                    ocr_html=None,
                     ocr_regions=[],
                     annotated_src=None,
                 )
@@ -118,7 +122,7 @@ class OCRService:
             image_result = self._build_image_result(
                 file_name=file_name,
                 image_type=suffix.lower().lstrip("."),
-                src=file_name,
+                src=resolved_src,
                 paddle_result=res_dict,
                 image_path=None,
                 image_bytes=image_bytes,
@@ -145,6 +149,7 @@ class OCRService:
 
         ocr_regions: list[OCRRegion] = []
         full_text_parts: list[str] = []
+        full_html_parts: list[str] = []
 
         for block in parsing_res_list:
             text = (block.get("block_content") or "").strip()
@@ -177,6 +182,11 @@ class OCRService:
             if text:
                 full_text_parts.append(text)
 
+                if "<table" in text.lower() and "</table>" in text.lower():
+                    full_html_parts.append(text)
+                else:
+                    full_html_parts.append(escape(text).replace("\n", "<br/>"))
+
         annotated_path = self._annotated_output_path(file_name)
         self._draw_annotated_image(
             image_path=image_path,
@@ -188,8 +198,9 @@ class OCRService:
         return ImageResult(
             image_type=image_type,
             file_name=file_name,
-            src=src,
+            src=src or file_name,
             ocr_text="\n".join(full_text_parts),
+            ocr_html="<br/>".join(full_html_parts) if full_html_parts else None,
             ocr_regions=ocr_regions,
             annotated_src=str(annotated_path),
             width=res.get("width"),
@@ -268,4 +279,3 @@ class OCRService:
 #   --adjust-extension \
 #   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=24248001000650" \
 #   --no-check-certificate
-

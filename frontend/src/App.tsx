@@ -53,8 +53,8 @@ export default function App() {
     setView("results");
   };
 
-  const handleOpenHistoryItem = (entry: SavedSubmission) => {
-    setLatestResult(entry.result);
+  const handleOpenHistoryItem = (item: any) => {
+    setLatestResult(item.result);
     setView("results");
   };
 

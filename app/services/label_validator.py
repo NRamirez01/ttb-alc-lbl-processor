@@ -116,6 +116,10 @@ def fuzzy_token_match(expected: str, ocr_text: str) -> tuple[bool, str]:
     return (enough_absolute or enough_ratio), ", ".join(matched)
 
 
+def humanize_field_name(field: str) -> str:
+    return field.replace("_", " ").strip().capitalize()
+
+
 def make_check(
     field: str,
     expected: str,
@@ -148,6 +152,8 @@ def validate_application_against_ocr(
         required_in_application: bool = False,
         severity: str = "warning",
     ) -> None:
+        field_label = humanize_field_name(field)
+
         if required_in_application and not (expected or "").strip():
             checks.append(
                 make_check(
@@ -155,7 +161,7 @@ def validate_application_against_ocr(
                     expected=expected,
                     found="",
                     status="missing",
-                    message=f"Application field '{field}' is empty.",
+                    message=f"Application field '{field_label}' is empty.",
                 )
             )
             return
@@ -168,7 +174,7 @@ def validate_application_against_ocr(
                     expected=expected,
                     found="",
                     status="not_checked",
-                    message=f"No candidate values available to validate '{field}'.",
+                    message=f"No candidate values available to validate '{field_label}'.",
                 )
             )
             return
@@ -182,7 +188,7 @@ def validate_application_against_ocr(
                     expected=expected,
                     found=matched_value,
                     status="match",
-                    message=f"{field} found in OCR text.",
+                    message=f"{field_label} found in image.",
                 )
             )
         else:
@@ -198,7 +204,7 @@ def validate_application_against_ocr(
                     expected=expected,
                     found="",
                     status=fallback_status,
-                    message=f"{field} not found in OCR text.",
+                    message=f"{field_label} not found in image.",
                 )
             )
 
@@ -211,6 +217,7 @@ def validate_application_against_ocr(
 
     name_and_address_expected = application.name_and_address or ""
     if name_and_address_expected.strip():
+        field_label = humanize_field_name("name_and_address")
         fuzzy_matched, fuzzy_found = fuzzy_token_match(name_and_address_expected, combined_ocr_text)
         checks.append(
             make_check(
@@ -218,19 +225,20 @@ def validate_application_against_ocr(
                 expected=name_and_address_expected,
                 found=fuzzy_found,
                 status="match" if fuzzy_matched else "mismatch",
-                message="name_and_address fuzzy-matched in OCR text."
+                message=f"{field_label} found in image."
                 if fuzzy_matched
-                else "name_and_address not found in OCR text.",
+                else f"{field_label} not found in image.",
             )
         )
     else:
+        field_label = humanize_field_name("name_and_address")
         checks.append(
             make_check(
                 field="name_and_address",
                 expected="",
                 found="",
                 status="not_checked",
-                message="No candidate values available to validate 'name_and_address'.",
+                message=f"No candidate values available to validate '{field_label}'.",
             )
         )
 

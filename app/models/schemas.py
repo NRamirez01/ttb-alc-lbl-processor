@@ -71,6 +71,7 @@ class ImageResult(BaseModel):
     file_name: str
     src: str
     ocr_text: str = ""
+    ocr_html: Optional[str] = None
     ocr_regions: list[OCRRegion] = Field(default_factory=list)
     annotated_src: Optional[str] = None
     width: Optional[int] = None

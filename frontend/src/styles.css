@@ -625,10 +625,27 @@ input[type="checkbox"] {
 
 .toolbar {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 12px 24px;
   background: #1f2937;
   border-bottom: 1px solid #111;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .toolbar button {
@@ -693,7 +710,7 @@ input[type="checkbox"] {
 
 .results-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -715,6 +732,13 @@ input[type="checkbox"] {
   letter-spacing: 0.03em;
 }
 
+.result-stat-help {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
 .result-stat-value {
   font-size: 24px;
   font-weight: 700;
@@ -722,6 +746,13 @@ input[type="checkbox"] {
 
 .results-section + .results-section {
   margin-top: 24px;
+}
+
+.results-section-help {
+  margin: 6px 0 12px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
 }
 
 .results-summary-grid {
