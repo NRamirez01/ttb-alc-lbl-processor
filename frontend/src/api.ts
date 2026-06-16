@@ -1,4 +1,4 @@
-import type { ProcessResponse } from "./types";
+import type { ProcessResponse, SubmitResult } from "./types";
 
 export async function processApplicationUrl(sourceUrl: string): Promise<ProcessResponse> {
   const response = await fetch("/process-url?include_images=true", {
@@ -17,7 +17,7 @@ export async function processApplicationUrl(sourceUrl: string): Promise<ProcessR
   return response.json();
 }
 
-export async function submitApplicationForm(formData: FormData): Promise<Response> {
+export async function submitApplicationForm(formData: FormData): Promise<SubmitResult> {
   const response = await fetch("/submit", {
     method: "POST",
     body: formData
@@ -28,5 +28,5 @@ export async function submitApplicationForm(formData: FormData): Promise<Respons
     throw new Error(text || "Application submit failed");
   }
 
-  return response;
+  return response.json();
 }

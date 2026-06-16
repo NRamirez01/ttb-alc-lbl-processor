@@ -88,34 +88,6 @@ def build_name_address_variants(name_and_address: str) -> list[str]:
     return deduped
 
 
-def tokenize_meaningful(value: str) -> list[str]:
-    normalized = normalize_for_match(value)
-    tokens = normalized.split()
-    return [
-        token for token in tokens
-        if len(token) >= 3
-        and token not in {
-            "THE", "AND", "LLC", "INC", "LTD", "CO", "CORP",
-            "OF", "BY", "FOR", "AT", "A", "AN"
-        }
-    ]
-
-
-def fuzzy_token_match(expected: str, ocr_text: str) -> tuple[bool, str]:
-    expected_tokens = tokenize_meaningful(expected)
-    ocr_tokens = set(tokenize_meaningful(ocr_text))
-
-    if not expected_tokens:
-        return False, ""
-
-    matched = [token for token in expected_tokens if token in ocr_tokens]
-
-    enough_absolute = len(matched) >= 3
-    enough_ratio = len(matched) / len(expected_tokens) >= 0.6
-
-    return (enough_absolute or enough_ratio), ", ".join(matched)
-
-
 def make_check(
     field: str,
     expected: str,
@@ -209,30 +181,11 @@ def validate_application_against_ocr(
         required_in_application=True,
     )
 
-    name_and_address_expected = application.name_and_address or ""
-    if name_and_address_expected.strip():
-        fuzzy_matched, fuzzy_found = fuzzy_token_match(name_and_address_expected, combined_ocr_text)
-        checks.append(
-            make_check(
-                field="name_and_address",
-                expected=name_and_address_expected,
-                found=fuzzy_found,
-                status="match" if fuzzy_matched else "mismatch",
-                message="name_and_address fuzzy-matched in OCR text."
-                if fuzzy_matched
-                else "name_and_address not found in OCR text.",
-            )
-        )
-    else:
-        checks.append(
-            make_check(
-                field="name_and_address",
-                expected="",
-                found="",
-                status="not_checked",
-                message="No candidate values available to validate 'name_and_address'.",
-            )
-        )
+    add_presence_check(
+        field="name_and_address",
+        expected=application.name_and_address or "",
+        candidates=build_name_address_variants(application.name_and_address or ""),
+    )
 
     applicant_variants = compact_lines(application.print_name_of_applicant or "")
     add_presence_check(

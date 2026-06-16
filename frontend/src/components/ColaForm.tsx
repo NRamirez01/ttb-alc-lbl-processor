@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { processApplicationUrl, submitApplicationForm } from "../api";
-import type { ApplicationData } from "../types";
+import type { ApplicationData, SubmitResult } from "../types";
 
 type Props = {
   application: ApplicationData | null;
+  onSubmitted: (result: SubmitResult) => void;
 };
 
 type LabelPreview = {
@@ -11,7 +12,6 @@ type LabelPreview = {
   url: string;
   name: string;
   file: File | null;
-  fromProcessedHtml?: boolean;
 };
 
 function v(value?: string) {
@@ -22,7 +22,7 @@ function checked(actual: string | undefined, expected: string) {
   return (actual || "").toLowerCase().includes(expected.toLowerCase());
 }
 
-export function ColaForm({ application }: Props) {
+export function ColaForm({ application, onSubmitted }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
@@ -73,8 +73,11 @@ export function ColaForm({ application }: Props) {
         .map((preview) => preview.url);
 
       formData.append("remote_image_urls", JSON.stringify(remoteImageUrls));
-      await submitApplicationForm(formData);
+
+      const result = await submitApplicationForm(formData);
+
       setSubmitSuccess("Application submitted.");
+      onSubmitted(result);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
     } finally {

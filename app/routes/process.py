@@ -11,6 +11,7 @@ from app.services.label_validator import validate_application_against_ocr
 from app.services.normalizer import build_process_response
 from app.utils.text_normalization import clean_text
 from app.utils.timing import Timer
+from app.services.label_rules import normalize_category
 
 router = APIRouter()
 
@@ -40,19 +41,74 @@ def populate_serial_fields(application: ApplicationData) -> ApplicationData:
     application.serial_number = f"{year_part}-{number_part}" if year_part or number_part else ""
     return application
 
+def summarize_label_rule_results(category: str, per_image_results: list[dict]) -> dict:
+    normalized_category = normalize_category(category)
 
-def build_label_rule_results(application: ApplicationData, uploaded_images: list[dict]) -> list[dict]:
+    category_results = [
+        item for item in per_image_results
+        if normalize_category(item.get("result", {}).get("category", "")) == normalized_category
+    ]
+    warning_results = [
+        item for item in per_image_results
+        if item.get("result", {}).get("category") == "warning"
+    ]
+
+    def any_present(results: list[dict], check_name: str) -> bool:
+        return any(
+            item.get("result", {}).get("checks", {}).get(check_name, {}).get("status") == "present"
+            for item in results
+        )
+
+    summary = {
+        "brand_name": "present" if any_present(category_results, "brand_name") else "missing",
+        "class_type": "present" if any_present(category_results, "class_type") else "missing",
+        "alcohol_content": "present" if any_present(category_results, "alcohol_content") else "missing",
+        "name_address": "present" if any_present(category_results, "name_address") else "missing",
+        "net_contents": "present" if any_present(category_results, "net_contents") else "missing",
+        "government_warning": "present" if any_present(warning_results, "government_warning") else "missing",
+    }
+
+    same_fov_image = next(
+        (
+            item.get("file_name")
+            for item in category_results
+            if item.get("result", {}).get("checks", {}).get("same_field_of_vision", {}).get("status") == "pass"
+        ),
+        None,
+    )
+
+    if normalized_category == "distilled_spirits":
+        summary["same_field_of_vision"] = "pass" if same_fov_image else "fail"
+
+    required_fields = ["brand_name", "class_type", "alcohol_content", "net_contents", "government_warning"]
+    if normalized_category == "distilled_spirits":
+        required_fields.append("same_field_of_vision")
+
+    overall_status = "pass" if all(summary[field] == "present" or summary[field] == "pass" for field in required_fields) else "warning"
+
+    return {
+        "category": normalized_category,
+        "overall_status": overall_status,
+        "summary": summary,
+        "debug": {
+            "same_field_of_vision_source": same_fov_image,
+        },
+    }
+
+def build_label_rule_results(application: ApplicationData, uploaded_images: list[dict]) -> dict:
     beverage_category = (application.type_of_product or "").strip().lower()
-    label_rule_results: list[dict] = []
+    per_image_results: list[dict] = []
 
     for image_result in uploaded_images:
         regions = image_result.get("ocr_regions") or []
+        file_name = image_result.get("file_name", "")
+        image_type = image_result.get("image_type", "")
 
         if beverage_category:
-            label_rule_results.append(
+            per_image_results.append(
                 {
-                    "file_name": image_result.get("file_name", ""),
-                    "image_type": image_result.get("image_type", ""),
+                    "file_name": file_name,
+                    "image_type": image_type,
                     "result": evaluate_label(
                         regions=regions,
                         category=beverage_category,
@@ -61,10 +117,10 @@ def build_label_rule_results(application: ApplicationData, uploaded_images: list
                 }
             )
 
-        label_rule_results.append(
+        per_image_results.append(
             {
-                "file_name": image_result.get("file_name", ""),
-                "image_type": image_result.get("image_type", ""),
+                "file_name": file_name,
+                "image_type": image_type,
                 "result": evaluate_label(
                     regions=regions,
                     category="warning",
@@ -72,7 +128,12 @@ def build_label_rule_results(application: ApplicationData, uploaded_images: list
             }
         )
 
-    return label_rule_results
+    summary = summarize_label_rule_results(beverage_category, per_image_results)
+
+    return {
+        "summary": summary,
+        "per_image": per_image_results,
+    }
 
 
 @router.post("/process-url", response_model=ProcessResponse)
@@ -114,19 +175,12 @@ async def process_application_url(
                 if not (application.signature or "").strip():
                     application.signature = "Application was e-filed"
 
-                ocr_payload = [image.model_dump() for image in images]
-                validation = validate_application_against_ocr(application, ocr_payload)
-                label_rule_results = build_label_rule_results(application, ocr_payload)
-
-                result = build_process_response(
+                return build_process_response(
                     application=application,
                     images=images,
                     timing_ms=timer.elapsed_ms,
+                    signature_image=signature_image,
                 )
-                result.validation = validation
-                result.label_rule_results = label_rule_results
-                result.signature_image = signature_image
-                return result
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Failed to fetch application URL: {exc}")
@@ -139,8 +193,12 @@ async def submit_application_form(request: Request):
 
     label_images = form.getlist("label_images")
     remote_image_urls_raw = str(form.get("remote_image_urls", "[]"))
-    remote_image_urls = json.loads(remote_image_urls_raw) if remote_image_urls_raw else []
 
+    try:
+        remote_image_urls = json.loads(remote_image_urls_raw) if remote_image_urls_raw else []
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid remote_image_urls payload")
+    
     serial_year_1 = str(form.get("serial_year_1", ""))
     serial_year_2 = str(form.get("serial_year_2", ""))
     serial_number_1 = str(form.get("serial_number_1", ""))

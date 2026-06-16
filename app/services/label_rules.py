@@ -60,6 +60,17 @@ SPIRITS_CLASS_TERMS = [
 ]
 
 
+def normalize_category(category: str) -> str:
+    normalized = _norm(category)
+    if "distilled" in normalized:
+        return "distilled_spirits"
+    if "malt" in normalized:
+        return "malt_beverages"
+    if "wine" == normalized:
+        return "wine"
+    return normalized
+
+
 def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "")).strip().lower()
 
@@ -127,14 +138,13 @@ def build_presence(status: bool, region_id: Optional[str] = None) -> Dict[str, A
 
 
 def evaluate_same_field_of_vision(found: Dict[str, Optional[str]], required: List[str]) -> Dict[str, Any]:
-    region_ids = [found.get(name) for name in required]
-    ok = all(region_ids) and len(set(region_ids)) == 1
+    ok = all(found.get(name) for name in required)
     return {
         "status": "pass" if ok else "fail",
         "required": required,
         "regions": {name: found.get(name) for name in required},
+        "rule_basis": "same_image",
     }
-
 
 def evaluate_label(
     regions: List[Dict[str, Any]],
@@ -142,7 +152,7 @@ def evaluate_label(
     abv: Optional[float] = None,
     expected_brand_name: Optional[str] = None,
 ) -> Dict[str, Any]:
-    category = (category or "").strip().lower()
+    category = normalize_category(category)
     all_text = collect_all_text(regions)
 
     # Prefer an OCR region that actually contains the known brand name.

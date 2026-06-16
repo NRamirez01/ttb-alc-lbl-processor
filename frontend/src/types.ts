@@ -76,4 +76,36 @@ export type ProcessResponse = {
   application: ApplicationData;
   images: ImageResult[];
   timing_ms: number;
+  warnings?: string[];
+  validation?: Record<string, unknown>;
+  label_rule_results?: Array<Record<string, unknown>>;
+  signature_image?: string | null;
+};
+
+export type ValidationCheck = {
+  field: string;
+  expected: string;
+  found: string;
+  status: string;
+  message: string;
+};
+
+export type ValidationResult = {
+  overall_status: string;
+  checks: ValidationCheck[];
+  combined_ocr_text: string;
+};
+
+export type LabelRuleSummary = {
+  category: string;
+  overall_status?: string;
+  summary?: Record<string, string>;
+  checks?: Record<string, unknown>;
+};
+
+export type SubmitResult = {
+  application: ApplicationData;
+  label_images: ImageResult[];
+  validation: ValidationResult;
+  label_rule_results: LabelRuleSummary | Record<string, unknown>;
 };

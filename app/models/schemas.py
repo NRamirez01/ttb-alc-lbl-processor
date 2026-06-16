@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 
 class ProcessUrlRequest(BaseModel):
     source_url: str
@@ -82,3 +82,6 @@ class ProcessResponse(BaseModel):
     images: list[ImageResult] = Field(default_factory=list)
     timing_ms: int
     warnings: list[str] = Field(default_factory=list)
+    validation: dict[str, Any] = Field(default_factory=dict)
+    label_rule_results: list[dict[str, Any]] = Field(default_factory=list)
+    signature_image: Optional[str] = None
