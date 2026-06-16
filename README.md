@@ -14,7 +14,7 @@ It can use:
 The app includes:
 
 - a **FastAPI** backend
-- a TypeScript frontend served from `frontend/dist`
+- a frontend served from `frontend/dist`
 - OCR result visualization with annotated image output
 - application-vs-label validation checks
 - per-image compliance and warning checks
@@ -33,7 +33,7 @@ For example, one local model can focus on OCR while other local models handle di
 
 ### Tradeoffs
 
-- local setup can be more complicated
+- local setup is more manual
 - performance depends on your hardware
 - CPU fallback can be significantly slower than local GPU-backed inference
 - long CPU OCR requests may time out behind Cloudflare or similar proxies
@@ -44,15 +44,24 @@ This template for this project is **heavily** inspired by the real COLA applicat
 
 It keeps the workflow closer to the real review process that people are already familiar with and lays the groundwork for future workflow optimizations.
 
-Beyond direct COLA integrations, the format is aimed toward being targetted to be compatible with current systems.
+Beyond direct COLA integrations, the format is aimed toward being highly compatible with current systems.
 
 ## Demo video
 Watch the demo here: 
--- [Fast Mode](https://raw.githubusercontent.com/NRamirez01/ttb-alc-lbl-processor/main/docs/Fast_Mode_OCR.mp4)
+- [Fast Mode](https://github.com/NRamirez01/ttb-alc-lbl-processor/raw/main/docs/fast_preset_demo.mp4)
+- [Quality Mode](https://github.com/NRamirez01/ttb-alc-lbl-processor/raw/main/docs/quality_preset_demo.mp4)
 
--- [Quality Mode](https://raw.githubusercontent.com/NRamirez01/ttb-alc-lbl-processor/main/docs/Quality_Mode_OCR.mp4)
 
+## Repository layout
 
+```text
+app/           FastAPI backend
+frontend/      frontend source and build output
+models/        local OCR model files
+output/        generated annotated output images
+tmp/           temporary uploads
+static/        static assets served by the backend
+```
 
 ## Prerequisites
 
@@ -68,7 +77,7 @@ Optional but strongly recommended for faster OCR:
 - `llama-server`
 - a local GPU-supported setup for `llama.cpp`
 
-## Required model files (for GPU inference)
+## Required model files (for GPU mode)
 
 This app supports local OCR using the PaddleOCR-VL GGUF model files.
 
@@ -89,6 +98,7 @@ ttb-alc-lbl-processor/
 ```
 
 If either file is missing, the local OCR server will not work correctly.
+
 
 ## Run locally
 
@@ -138,7 +148,7 @@ npm run build
 cd ..
 ```
 
-## Start the local OCR server (for GPU inference)
+## Start the local OCR server
 
 If you want the faster local OCR path, start `llama-server` before launching the app.
 
@@ -238,9 +248,9 @@ These settings help preserve structure and improve OCR quality for label images,
 
 ### Current performance
 
-The current local setup using the quality preset takes roughly **5 seconds per image** and it runs on an **AMD Radeon 7900 XTX with ROCm**. 
+The current local setup processes roughly **5 seconds per image** and is running on an **AMD Radeon 7900 XTX with ROCm**. 
 
-This setup works well enough for local use, but inference support and optimization are generally stronger in the NVIDIA CUDA ecosystem, so performance may improve further on more optimized or better-supported inference hardware.
+This setup works well enough for local use, but inference support and optimization are generally stronger in the NVIDIA CUDA ecosystem, so performance may improve on more optimized or better-supported inference hardware.
 
 In practical terms:
 
@@ -276,7 +286,7 @@ In cases like that, the **Quality** preset is more reliable than **Fast** as the
 
 **NOTE** Presets do not effect the CPU inference pipeline settings as the processing time hit is too large.
 
-### Speed vs quality toggles
+### Speed vs quality tradeoff
 
 Presets work through changing the OCR pipeline instantiation settings.
 Relevant options include:
