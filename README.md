@@ -48,20 +48,14 @@ Beyond direct COLA integrations, the format is aimed toward being highly compati
 
 ## Demo video
 Watch the demo here: 
-- [Fast Mode](https://github.com/NRamirez01/ttb-alc-lbl-processor/raw/main/docs/fast_preset_demo.mp4)
-- [Quality Mode](https://github.com/NRamirez01/ttb-alc-lbl-processor/raw/main/docs/quality_preset_demo.mp4)
 
+Quality Preset:
 
-## Repository layout
+https://github.com/user-attachments/assets/ae6d7fbc-32d9-4d3d-83bc-389cbcf7047a
 
-```text
-app/           FastAPI backend
-frontend/      frontend source and build output
-models/        local OCR model files
-output/        generated annotated output images
-tmp/           temporary uploads
-static/        static assets served by the backend
-```
+Fast Preset:
+
+https://github.com/user-attachments/assets/27d3b26b-0517-431d-af70-be626333f583
 
 ## Prerequisites
 
