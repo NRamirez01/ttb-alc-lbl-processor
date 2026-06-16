@@ -8,6 +8,9 @@ uploads/
 dist/
 build/
 models/*
+!models/.gitkeep
 */node_modules/
 output/*
+!output/.gitkeep
 static/*
+!static/.gitkeep

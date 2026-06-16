@@ -2,58 +2,76 @@ from html import escape
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any
+from typing import Any, Literal
 
+import httpx
 from PIL import Image, ImageDraw
 from paddleocr import PaddleOCRVL
 
 from app.models.schemas import OCRRegion, ImageResult
 from app.utils.timing import Timer
 
+OCRPreset = Literal["fast", "balanced", "quality"]
 
-ocr = PaddleOCRVL(
-    pipeline_version="v1.6",
-    vl_rec_backend="llama-cpp-server",
-    vl_rec_server_url="http://localhost:8080",
-    vl_rec_max_concurrency=2,
-    use_doc_orientation_classify=True,
-    use_doc_unwarping=True,
-    use_layout_detection=True,
-    merge_layout_blocks=False,
-    use_ocr_for_image_block=True,
-    format_block_content=False,
-)
+OCR_SERVER_URL = "http://localhost:8080"
+OCR_SERVER_HEALTH_PATH = "/health"
+OCR_SERVER_TIMEOUT_SECONDS = 1.0
 
 
-# llama-server `
-#   -m "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF.gguf" `
-#   --mmproj "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF-mmproj.gguf" `
-#   --host 0.0.0.0 `
-#   --port 8080 `
-#   --temp 0 `
-#   --n-gpu-layers 999 `
-#   --ctx-size 16384 `
-#   --parallel 2
+def is_ocr_server_available(url: str = OCR_SERVER_URL) -> bool:
+    try:
+        with httpx.Client(timeout=OCR_SERVER_TIMEOUT_SECONDS) as client:
+            response = client.get(f"{url}{OCR_SERVER_HEALTH_PATH}")
+            return response.is_success
+    except Exception:
+        return False
 
-# llama-server `
-#   -m "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF.gguf" `
-#   --mmproj "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF-mmproj.gguf" `
-#   --host 0.0.0.0 `
-#   --port 8080 `
-#   --temp 0 `
-#   --n-gpu-layers 999 `
-#   --ctx-size 32768 `
-#   --parallel 4
 
-# llama-server `
-#   -m "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF.gguf" `
-#   --mmproj "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF-mmproj.gguf" `
-#   --host 0.0.0.0 `
-#   --port 8080 `
-#   --temp 0 `
-#   --n-gpu-layers 999 `
-#   --ctx-size 32768 `
-#   --parallel 2
+def _preset_options(preset: OCRPreset) -> dict[str, Any]:
+    if preset == "fast":
+        return {
+            "use_doc_orientation_classify": False,
+            "use_doc_unwarping": False,
+            "use_layout_detection": False,
+            "merge_layout_blocks": True,
+            "use_ocr_for_image_block": False,
+            "format_block_content": False,
+        }
+    if preset == "balanced":
+        return {
+            "use_doc_orientation_classify": True,
+            "use_doc_unwarping": False,
+            "use_layout_detection": True,
+            "merge_layout_blocks": False,
+            "use_ocr_for_image_block": True,
+            "format_block_content": False,
+        }
+    return {
+        "use_doc_orientation_classify": True,
+        "use_doc_unwarping": True,
+        "use_layout_detection": True,
+        "merge_layout_blocks": False,
+        "use_ocr_for_image_block": True,
+        "format_block_content": False,
+    }
+
+
+def build_server_ocr(preset: OCRPreset) -> PaddleOCRVL:
+    return PaddleOCRVL(
+        pipeline_version="v1.6",
+        vl_rec_backend="llama-cpp-server",
+        vl_rec_server_url=OCR_SERVER_URL,
+        vl_rec_max_concurrency=2,
+        **_preset_options(preset),
+    )
+
+
+def build_cpu_ocr(preset: OCRPreset) -> PaddleOCRVL:
+    return PaddleOCRVL(
+        pipeline_version="v1.6",
+        **_preset_options(preset),
+    )
+
 
 class OCRService:
     def __init__(self) -> None:
@@ -61,9 +79,51 @@ class OCRService:
         self.output_dir = Path("output")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def extract_text(self, image_path: str) -> ImageResult:
+        self._ocr_instances: dict[tuple[str, OCRPreset], PaddleOCRVL] = {}
+
+    def _build_backend_for_preset(self, preset: OCRPreset) -> tuple[PaddleOCRVL, str]:
+        if is_ocr_server_available():
+            try:
+                return build_server_ocr(preset), "llama-cpp-server"
+            except Exception as exc:
+                print(f"OCR server backend failed during init for preset={preset}, falling back to CPU: {exc}")
+
+        return build_cpu_ocr(preset), "cpu"
+
+    def _get_ocr(self, preset: OCRPreset) -> tuple[PaddleOCRVL, str]:
+        backend = "llama-cpp-server" if is_ocr_server_available() else "cpu"
+        cache_key = (backend, preset)
+
+        if cache_key not in self._ocr_instances:
+            if backend == "llama-cpp-server":
+                try:
+                    self._ocr_instances[cache_key] = build_server_ocr(preset)
+                except Exception:
+                    backend = "cpu"
+                    cache_key = (backend, preset)
+                    self._ocr_instances[cache_key] = build_cpu_ocr(preset)
+            else:
+                self._ocr_instances[cache_key] = build_cpu_ocr(preset)
+
+        return self._ocr_instances[cache_key], backend
+
+    def _predict_with_fallback(self, image_path: str, preset: OCRPreset) -> tuple[list[Any], str]:
+        ocr, backend = self._get_ocr(preset)
+
+        try:
+            return list(ocr.predict(image_path)), backend
+        except Exception as exc:
+            if backend == "llama-cpp-server":
+                print(f"OCR server prediction failed for preset={preset}, falling back to CPU: {exc}")
+                cpu_key = ("cpu", preset)
+                if cpu_key not in self._ocr_instances:
+                    self._ocr_instances[cpu_key] = build_cpu_ocr(preset)
+                return list(self._ocr_instances[cpu_key].predict(image_path)), "cpu"
+            raise
+
+    def extract_text(self, image_path: str, preset: OCRPreset = "quality") -> ImageResult:
         with Timer() as timer:
-            result = list(ocr.predict(image_path))
+            result, backend = self._predict_with_fallback(image_path, preset)
 
         if not result:
             return ImageResult(
@@ -90,9 +150,17 @@ class OCRService:
         )
 
         print(f"OCR processing time: {timer.elapsed_ms} ms")
+        print(f"OCR backend used: {backend}")
+        print(f"OCR preset used: {preset}")
         return image_result
 
-    def extract_text_from_bytes(self, image_bytes: bytes, file_name: str, src: str | None = None) -> ImageResult:
+    def extract_text_from_bytes(
+        self,
+        image_bytes: bytes,
+        file_name: str,
+        src: str | None = None,
+        preset: OCRPreset = "quality",
+    ) -> ImageResult:
         suffix = Path(file_name).suffix or ".png"
         resolved_src = src or file_name
 
@@ -102,7 +170,7 @@ class OCRService:
 
         try:
             with Timer() as timer:
-                result = list(ocr.predict(str(temp_path)))
+                result, backend = self._predict_with_fallback(str(temp_path), preset)
 
             if not result:
                 return ImageResult(
@@ -129,6 +197,8 @@ class OCRService:
             )
 
             print(f"OCR processing time: {timer.elapsed_ms} ms")
+            print(f"OCR backend used: {backend}")
+            print(f"OCR preset used: {preset}")
             return image_result
         finally:
             temp_path.unlink(missing_ok=True)
@@ -252,30 +322,3 @@ class OCRService:
                 draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
 
         image.save(output_path)
-
-
-# wget --page-requisites --convert-links --adjust-extensionn https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=12243001000461
-
-# wget --page-requisites --convert-links --adjust-extensionn https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=16199001000074
-
-# wget -P 12243001000461 \
-#   --page-requisites \
-#   --convert-links \
-#   --adjust-extension \
-#   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=12243001000461" \
-#   --no-check-certificate
-
-
-# wget -P 16199001000074 \
-#   --page-requisites \
-#   --convert-links \
-#   --adjust-extension \
-#   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=16199001000074" \
-#   --no-check-certificate
-
-# wget -P 24248001000650 \
-#   --page-requisites \
-#   --convert-links \
-#   --adjust-extension \
-#   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=24248001000650" \
-#   --no-check-certificate

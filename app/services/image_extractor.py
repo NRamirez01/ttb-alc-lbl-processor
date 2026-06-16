@@ -28,35 +28,6 @@ def normalize_image_src(src: str) -> str:
     base = re.sub(r"\.do$", ".jpg", base, flags=re.IGNORECASE)
     return base
 
-
-def extract_images_from_html(html_text: str) -> list[ImageResult]:
-    soup = BeautifulSoup(html_text, "lxml")
-    results: list[ImageResult] = []
-
-    for img in soup.find_all("img"):
-        src = img.get("src", "")
-        alt = img.get("alt", "").lower()
-
-        image_type = "unknown"
-        if "signature" in alt:
-            image_type = "signature"
-        elif "brand" in alt or "front" in alt:
-            image_type = "front_label"
-        elif "back" in alt:
-            image_type = "back_label"
-
-        results.append(
-            ImageResult(
-                image_type=image_type,
-                file_name=r"C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\input\24248001000650\ttbonline.gov\colasonline/" + normalize_image_src(src),
-                src=src,
-                ocr_text="",
-            )
-        )
-
-    return results
-
-
 async def extract_ttb_assets_from_remote_html(
     html_text: str,
     base_url: str,

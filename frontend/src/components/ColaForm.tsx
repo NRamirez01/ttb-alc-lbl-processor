@@ -14,6 +14,8 @@ type LabelPreview = {
   file: File | null;
 };
 
+type OcrPreset = "fast" | "balanced" | "quality";
+
 function v(value?: string) {
   return value?.trim() || "";
 }
@@ -36,6 +38,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [labelPreviews, setLabelPreviews] = useState<LabelPreview[]>([]);
   const [applicationUrl, setApplicationUrl] = useState("");
+  const [ocrPreset, setOcrPreset] = useState<OcrPreset>("quality");
 
   const [formApplication, setFormApplication] = useState<ApplicationData | null>(application);
   const [processingHtml, setProcessingHtml] = useState(false);
@@ -80,6 +83,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
         .map((preview) => preview.url);
 
       formData.append("remote_image_urls", JSON.stringify(remoteImageUrls));
+      formData.append("ocr_preset", ocrPreset);
 
       const result = await submitApplicationForm(formData);
 
@@ -204,7 +208,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.rep_id_no ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     rep_id_no: e.target.value
                   }))
                 }
@@ -245,7 +249,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.plant_registry_basic_permit_brewers_no ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     plant_registry_basic_permit_brewers_no: e.target.value
                   }))
                 }
@@ -263,7 +267,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     checked={checked(a?.source_of_product, "Domestic")}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         source_of_product: e.target.value
                       }))
                     }
@@ -278,7 +282,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     checked={checked(a?.source_of_product, "Imported")}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         source_of_product: e.target.value
                       }))
                     }
@@ -307,7 +311,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_year_1: e.target.value
                       }))
                     }
@@ -321,7 +325,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_year_2: e.target.value
                       }))
                     }
@@ -338,7 +342,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_number_1: e.target.value
                       }))
                     }
@@ -352,7 +356,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_number_2: e.target.value
                       }))
                     }
@@ -366,7 +370,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_number_3: e.target.value
                       }))
                     }
@@ -380,7 +384,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     maxLength={1}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         serial_number_4: e.target.value
                       }))
                     }
@@ -409,7 +413,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     checked={checked(a?.type_of_product, "WINE")}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         type_of_product: e.target.value
                       }))
                     }
@@ -424,7 +428,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     checked={checked(a?.type_of_product, "DISTILLED")}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         type_of_product: e.target.value
                       }))
                     }
@@ -439,7 +443,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                     checked={checked(a?.type_of_product, "MALT")}
                     onChange={(e) =>
                       setFormApplication((current) => ({
-                        ...(current ?? {} as ApplicationData),
+                        ...(current ?? ({} as ApplicationData)),
                         type_of_product: e.target.value
                       }))
                     }
@@ -458,7 +462,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.brand_name ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   brand_name: e.target.value
                 }))
               }
@@ -473,7 +477,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.fanciful_name ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   fanciful_name: e.target.value
                 }))
               }
@@ -489,7 +493,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.formula ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     formula: e.target.value
                   }))
                 }
@@ -503,7 +507,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.grape_varietal ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     grape_varietal: e.target.value
                   }))
                 }
@@ -519,7 +523,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.wine_appellation ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   wine_appellation: e.target.value
                 }))
               }
@@ -535,7 +539,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.phone_number ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     phone_number: e.target.value
                   }))
                 }
@@ -549,7 +553,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.email_address ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     email_address: e.target.value
                   }))
                 }
@@ -571,7 +575,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.name_and_address ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   name_and_address: e.target.value
                 }))
               }
@@ -586,7 +590,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.mailing_address ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   mailing_address: e.target.value
                 }))
               }
@@ -607,7 +611,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 checked={checked(a?.type_of_application, "CERTIFICATE OF LABEL APPROVAL")}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     type_of_application: e.target.value
                   }))
                 }
@@ -624,7 +628,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 checked={checked(a?.type_of_application, "EXEMPTION")}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     type_of_application: e.target.value
                   }))
                 }
@@ -640,7 +644,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.sale_in_state ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     sale_in_state: e.target.value
                   }))
                 }
@@ -658,7 +662,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 checked={checked(a?.type_of_application, "DISTINCTIVE")}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     type_of_application: e.target.value
                   }))
                 }
@@ -674,7 +678,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.bottle_capacity ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     bottle_capacity: e.target.value
                   }))
                 }
@@ -694,7 +698,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 checked={checked(a?.type_of_application, "RESUBMISSION")}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     type_of_application: e.target.value
                   }))
                 }
@@ -710,7 +714,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
                 value={a?.resubmission_ttb_id ?? ""}
                 onChange={(e) =>
                   setFormApplication((current) => ({
-                    ...(current ?? {} as ApplicationData),
+                    ...(current ?? ({} as ApplicationData)),
                     resubmission_ttb_id: e.target.value
                   }))
                 }
@@ -731,7 +735,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
           value={a?.container_notes ?? ""}
           onChange={(e) =>
             setFormApplication((current) => ({
-              ...(current ?? {} as ApplicationData),
+              ...(current ?? ({} as ApplicationData)),
               container_notes: e.target.value
             }))
           }
@@ -757,7 +761,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
             value={a?.date_of_application ?? ""}
             onChange={(e) =>
               setFormApplication((current) => ({
-                ...(current ?? {} as ApplicationData),
+                ...(current ?? ({} as ApplicationData)),
                 date_of_application: e.target.value
               }))
             }
@@ -785,7 +789,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
               value={a?.signature ?? ""}
               onChange={(e) =>
                 setFormApplication((current) => ({
-                  ...(current ?? {} as ApplicationData),
+                  ...(current ?? ({} as ApplicationData)),
                   signature: e.target.value
                 }))
               }
@@ -801,7 +805,7 @@ export function ColaForm({ application, onSubmitted }: Props) {
             value={a?.print_name_of_applicant ?? ""}
             onChange={(e) =>
               setFormApplication((current) => ({
-                ...(current ?? {} as ApplicationData),
+                ...(current ?? ({} as ApplicationData)),
                 print_name_of_applicant: e.target.value
               }))
             }
@@ -890,12 +894,30 @@ export function ColaForm({ application, onSubmitted }: Props) {
           </div>
         </div>
       </div>
+        
+<div className="form-actions">
+  <div className="form-actions-inline">
+    <label htmlFor="ocr_preset" className="form-actions-label">OCR Preset</label>
+    <select
+      id="ocr_preset"
+      name="ocr_preset"
+      className="field-input form-actions-select"
+      value={ocrPreset}
+      onChange={(e) => setOcrPreset(e.target.value as OcrPreset)}
+    >
+      <option value="fast">Fast</option>
+      <option value="balanced">Balanced</option>
+      <option value="quality">Quality</option>
+    </select>
+  </div>
 
-      <div className="form-actions">
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Submitting..." : "Submit Application"}
-        </button>
-      </div>
+  <button type="submit" disabled={submitting}>
+    {submitting ? "Submitting..." : "Submit Application"}
+  </button>
+</div>
+
+
+
 
       {hasSubmitted && submitSuccess && <div className="status">{submitSuccess}</div>}
       {hasSubmitted && submitError && <div className="error">{submitError}</div>}

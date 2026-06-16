@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+import uuid
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -193,12 +195,16 @@ async def submit_application_form(request: Request):
 
     label_images = form.getlist("label_images")
     remote_image_urls_raw = str(form.get("remote_image_urls", "[]"))
+    ocr_preset = str(form.get("ocr_preset", "quality")).strip().lower()
+
+    if ocr_preset not in {"fast", "quality"}:
+        ocr_preset = "quality"
 
     try:
         remote_image_urls = json.loads(remote_image_urls_raw) if remote_image_urls_raw else []
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid remote_image_urls payload")
-    
+
     serial_year_1 = str(form.get("serial_year_1", ""))
     serial_year_2 = str(form.get("serial_year_2", ""))
     serial_number_1 = str(form.get("serial_number_1", ""))
@@ -253,6 +259,8 @@ async def submit_application_form(request: Request):
     )
 
     uploaded_images = []
+    uploads_dir = Path("static") / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
 
     for image in label_images:
         if not hasattr(image, "read"):
@@ -262,14 +270,23 @@ async def submit_application_form(request: Request):
         if not image_bytes:
             continue
 
+        original_name = getattr(image, "filename", None) or "uploaded-image.jpg"
+        suffix = Path(original_name).suffix or ".jpg"
+        saved_name = f"{Path(original_name).stem}-{uuid.uuid4().hex}{suffix}"
+        saved_path = uploads_dir / saved_name
+        saved_path.write_bytes(image_bytes)
+
+        image_src = f"/static/uploads/{saved_name}"
+
         ocr_result = ocr_service.extract_text_from_bytes(
             image_bytes=image_bytes,
-            file_name=file_name,
-            src=image_url,
+            file_name=original_name,
+            src=image_src,
+            preset=ocr_preset,
         )
 
         uploaded_images.append(ocr_result.model_dump())
-
+        
     if remote_image_urls:
         base_url = str(request.base_url).rstrip("/")
 
@@ -297,6 +314,7 @@ async def submit_application_form(request: Request):
                     image_bytes=image_bytes,
                     file_name=file_name,
                     src=image_url,
+                    preset=ocr_preset,
                 )
 
                 uploaded_images.append(ocr_result.model_dump())
