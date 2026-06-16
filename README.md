@@ -14,8 +14,8 @@ It can use:
 The app includes:
 
 - a **FastAPI** backend
-- a frontend served from `frontend/dist`
-- OCR result visualization with annotated image output
+- a Typescript frontend served from `frontend/dist`
+- OCR result visualization with annotated image output via PaddleOCR
 - application-vs-label validation checks
 - per-image compliance and warning checks
 
