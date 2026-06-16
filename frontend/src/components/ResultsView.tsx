@@ -36,6 +36,24 @@ function resolveAssetUrl(src?: string) {
   return src;
 }
 
+function cleanOcrText(input?: string) {
+  if (!input) return "";
+
+  const text = input
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/td>/gi, "  ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
 function groupPerImageResults(perImage: PerImageItem[]) {
   const grouped = new Map<
     string,
@@ -188,6 +206,9 @@ export function ResultsView({ result }: Props) {
         <div className="results-accordion-list">
           {groupedImages.map((item) => {
             const image = result.label_images?.find((img) => img.file_name === item.file_name);
+            const combinedOcrText = cleanOcrText(
+              item.categoryResult?.combined_ocr_text || item.warningResult?.combined_ocr_text
+            );
 
             return (
               <details className="results-accordion" key={item.file_name}>
@@ -221,13 +242,6 @@ export function ResultsView({ result }: Props) {
                           </div>
                         ))}
                       </div>
-
-                      {item.categoryResult.combined_ocr_text && (
-                        <div className="results-ocr-block">
-                          <div className="results-ocr-label">OCR Text</div>
-                          <pre>{item.categoryResult.combined_ocr_text}</pre>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -244,13 +258,13 @@ export function ResultsView({ result }: Props) {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
 
-                      {item.warningResult.combined_ocr_text && (
-                        <div className="results-ocr-block">
-                          <div className="results-ocr-label">OCR Text</div>
-                          <pre>{item.warningResult.combined_ocr_text}</pre>
-                        </div>
-                      )}
+                  {combinedOcrText && (
+                    <div className="results-ocr-block">
+                      <div className="results-ocr-label">OCR Text</div>
+                      <pre>{combinedOcrText}</pre>
                     </div>
                   )}
                 </div>
