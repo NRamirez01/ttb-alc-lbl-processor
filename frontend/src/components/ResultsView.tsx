@@ -32,7 +32,7 @@ function statusClass(status?: string) {
 function resolveAssetUrl(src?: string) {
   if (!src) return "";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
-  if (src.startsWith("/static/")) return `http://127.0.0.1:8000${src}`;
+  if (src.startsWith("/static/")) return `${window.location.origin}${src}`;
   return src;
 }
 
