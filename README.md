@@ -14,19 +14,17 @@ It can use:
 The app includes:
 
 - a **FastAPI** backend
-- a frontend served from `frontend/dist`
+- a TypeScript frontend served from `frontend/dist`
 - OCR result visualization with annotated image output
 - application-vs-label validation checks
 - per-image compliance and warning checks
-
----
 
 ## Why local compute
 
 Using local compute instead of cloud-hosted inference can be useful for:
 
 - **Security and privacy**: label images and extracted text stay on your machine or internal network
-- **Air-gapped operation**: local OCR can run in restricted or disconnected environments
+- **Air-gapped operation**: local OCR can be run in restricted or disconnected environments
 - **Lower recurring cost**: no per-request cloud inference charges
 - **Operational control**: you control hardware, upgrades, and deployment timing
 - **Multiple model workflows**: multiple local models can run at once for different application needs
@@ -35,25 +33,26 @@ For example, one local model can focus on OCR while other local models handle di
 
 ### Tradeoffs
 
-- local setup is more manual
+- local setup can be more complicated
 - performance depends on your hardware
 - CPU fallback can be significantly slower than local GPU-backed inference
 - long CPU OCR requests may time out behind Cloudflare or similar proxies
 
----
+## Why this uses actual application data
 
-## Repository layout
+This template for this project is **heavily** inspired by the real COLA application.
 
-```text
-app/           FastAPI backend
-frontend/      frontend source and build output
-models/        local OCR model files
-output/        generated annotated output images
-tmp/           temporary uploads
-static/        static assets served by the backend
-```
+It keeps the workflow closer to the real review process that people are already familiar with and lays the groundwork for future workflow optimizations.
 
----
+Beyond direct COLA integrations, the format is aimed toward being targetted to be compatible with current systems.
+
+## Demo video
+Watch the demo here: 
+-- [Fast Mode](https://raw.githubusercontent.com/NRamirez01/ttb-alc-lbl-processor/main/docs/Fast_Mode_OCR.mp4)
+
+-- [Quality Mode](https://raw.githubusercontent.com/NRamirez01/ttb-alc-lbl-processor/main/docs/Quality_Mode_OCR.mp4)
+
+
 
 ## Prerequisites
 
@@ -69,13 +68,11 @@ Optional but strongly recommended for faster OCR:
 - `llama-server`
 - a local GPU-supported setup for `llama.cpp`
 
----
-
-## Required model files
+## Required model files (for GPU inference)
 
 This app supports local OCR using the PaddleOCR-VL GGUF model files.
 
-Download **both** required files from the PaddleOCR-VL-1.6-GGUF model repository:
+Download **both** required files from the PaddleOCR-VL-1.6-GGUF [repository](https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6-GGUF):
 
 - the main GGUF model file
 - the matching multimodal projector (`mmproj`) file
@@ -92,61 +89,6 @@ ttb-alc-lbl-processor/
 ```
 
 If either file is missing, the local OCR server will not work correctly.
-
----
-
-## Backend dependencies
-
-Install the Python dependencies from `requirements.txt`.
-
-Example:
-
-```txt
---extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
-
-fastapi
-uvicorn
-beautifulsoup4
-lxml
-pydantic
-python-multipart
-pillow
-pytest
-httpx
-paddlepaddle==3.2.1
-paddleocr[doc-parser]
-```
-
-Then install:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
----
-
-## Frontend dependencies
-
-The frontend must be installed and built before the backend can serve the compiled UI.
-
-Install:
-
-```bash
-cd frontend
-npm install
-cd ..
-```
-
-Build:
-
-```bash
-cd frontend
-npm run build
-cd ..
-```
-
----
 
 ## Run locally
 
@@ -196,9 +138,7 @@ npm run build
 cd ..
 ```
 
----
-
-## Start the local OCR server
+## Start the local OCR server (for GPU inference)
 
 If you want the faster local OCR path, start `llama-server` before launching the app.
 
@@ -222,8 +162,6 @@ The backend expects the OCR server at:
 http://localhost:8080
 ```
 
----
-
 ## Start the app
 
 Run the FastAPI app:
@@ -237,8 +175,6 @@ The app will be available at:
 ```text
 http://127.0.0.1:6333
 ```
-
----
 
 ## Health checks
 
@@ -266,26 +202,28 @@ http://localhost:8080/health
 
 If it does not, verify it is listening on port `8080` another way.
 
----
+## How to use the app
+
+**Manual entry:** Fill out the application form, upload one or more label images, optionally choose an OCR preset, then click **Submit Application** to review OCR, validation, and compliance results.
+
+**TTB URL workflow:** Go to `https://ttbonline.gov/colasonline/publicPageBasicCola.do`, find an application, open its **printable version**, copy the full browser URL, paste it into the **Paste TTB application URL** field, click **load application**, then review and submit.
 
 ## OCR backend behavior
 
 The app prefers the local `llama-cpp-server` OCR backend when it is available.
 
-If the OCR server is not reachable, the app can fall back to CPU-based OCR.
+If the OCR server is not reachable, the app can fall back to CPU-based inference with PaddleOCR.
 
 ### Notes
 
-- local `llama-cpp-server` inference is usually much faster than CPU fallback
+- local `llama-cpp-server` inference is much faster than CPU fallback
 - CPU fallback may still work, but can be slow
 - slow CPU OCR can cause long-running web requests
 - if the app is behind Cloudflare, very long OCR requests may time out
 
----
-
 ## OCR settings and performance tuning
 
-The current OCR configuration is tuned for higher-quality document extraction and layout handling:
+The default OCR configuration is tuned for higher-quality document extraction and layout handling:
 
 ```python
 use_doc_orientation_classify=True
@@ -300,9 +238,9 @@ These settings help preserve structure and improve OCR quality for label images,
 
 ### Current performance
 
-The current local setup processes roughly **8 seconds per application**.
+The current local setup using the quality preset takes roughly **5 seconds per image** and it runs on an **AMD Radeon 7900 XTX with ROCm**. 
 
-This is currently running on an **AMD Radeon 7900 XTX with ROCm**. That works well enough for local use, but inference support and optimization are generally stronger in the NVIDIA CUDA ecosystem, so performance could likely improve on more optimized or better-supported inference hardware.
+This setup works well enough for local use, but inference support and optimization are generally stronger in the NVIDIA CUDA ecosystem, so performance may improve further on more optimized or better-supported inference hardware.
 
 In practical terms:
 
@@ -311,10 +249,36 @@ In practical terms:
 - it is upgradeable
 - faster inference hardware could reduce processing time significantly
 
-### Speed vs quality tradeoff
+### OCR presets
 
-Per-image OCR speed can be increased by changing OCR pipeline settings, but this may reduce OCR quality, layout fidelity, or structured extraction accuracy.
+The app supports multiple OCR presets so you can trade speed for quality.
 
+- **Fast**: prioritizes speed and is roughly **about twice as fast**, but may reduce OCR quality or layout fidelity
+- **Balanced**: a middle-ground option
+- **Quality**: prioritizes better OCR quality and structure, but may be slower
+
+The downside of **Fast** shows up more clearly on more complicated labels.
+
+This would especially noticeable for labels that are:
+
+- photographed at unusual angles
+- affected by poor lighting
+- affected by glare on the bottle
+- showing sideways text
+
+An example of a more challenging real-world application for OCR is:
+
+```text
+https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=16199001000074
+```
+
+In cases like that, the **Quality** preset is more reliable than **Fast** as the latter is just not able to pick up a lot of the text.
+
+**NOTE** Presets do not effect the CPU inference pipeline settings as the processing time hit is too large.
+
+### Speed vs quality toggles
+
+Presets work through changing the OCR pipeline instantiation settings.
 Relevant options include:
 
 ```python
@@ -335,18 +299,8 @@ Speed can often be improved by reducing or disabling features such as:
 
 However, those changes may reduce extraction quality depending on the label image.
 
-### OCR quality presets
-
-The application supports OCR quality presets:
-
-- **Fast**: prioritizes speed and disables some more expensive OCR/layout features
-- **Balanced**: a middle-ground preset
-- **Quality**: prioritizes better OCR structure and fidelity
-
 If speed matters more than OCR quality, use **Fast**.
 If OCR quality matters more than speed, use **Quality**.
-
----
 
 ## Output behavior
 
@@ -355,6 +309,7 @@ The app may create or use these directories during processing:
 - `models/` for local model files
 - `output/` for generated annotated images
 - `tmp/` for temporary uploads or transient processing files
+- `static/uploads/` for uploaded source images if persisted for preview/results rendering
 
 Example `.gitignore` patterns:
 
@@ -367,26 +322,10 @@ tmp/*
 
 models/*
 !models/.gitkeep
+
+static/uploads/*
+!static/uploads/.gitkeep
 ```
-
-Do not commit large model binaries unless that is explicitly intended.
-
----
-
-## Development workflow
-
-Typical local workflow:
-
-1. start the OCR server if using local GPU-backed inference
-2. install backend dependencies
-3. install frontend dependencies
-4. build the frontend
-5. run the backend
-6. open the app in the browser
-7. choose an OCR preset if desired
-8. upload label images and review results
-
----
 
 ## Troubleshooting
 
@@ -411,6 +350,10 @@ If that happens:
 - reduce request size or batch size
 - use the **Fast** OCR preset
 - consider background job processing for long OCR jobs
+
+### Uploaded image OCR works but the image preview is missing in results
+
+This usually means the uploaded image was processed in memory for OCR, but the original file was not persisted to a browser-accessible static path such as `static/uploads/`.
 
 ### Frontend changes do not appear
 
@@ -438,8 +381,6 @@ Verify:
 The backend serves the frontend only if the built frontend exists.
 
 Make sure `frontend/dist` has been generated.
-
----
 
 ## Summary
 

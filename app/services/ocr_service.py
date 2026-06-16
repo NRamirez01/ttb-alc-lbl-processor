@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 import httpx
 from PIL import Image, ImageDraw
-from paddleocr import PaddleOCRVL
+from paddleocr import PaddleOCRVL, PaddleOCR
 
 from app.models.schemas import OCRRegion, ImageResult
 from app.utils.timing import Timer
@@ -66,13 +66,16 @@ def build_server_ocr(preset: OCRPreset) -> PaddleOCRVL:
     )
 
 
-def build_cpu_ocr(preset: OCRPreset) -> PaddleOCRVL:
-    return PaddleOCRVL(
-        pipeline_version="v1.6",
-        **_preset_options(preset),
+def build_cpu_ocr() -> PaddleOCR:
+    return PaddleOCR(
+        device="cpu",
     )
 
 
+# python -m venv .venv   
+# .venv\Scripts\activate  
+# python -m pip install --upgrade pip
+# python -m pip install -r requirements.txt
 class OCRService:
     def __init__(self) -> None:
         self.available = True
@@ -88,7 +91,7 @@ class OCRService:
             except Exception as exc:
                 print(f"OCR server backend failed during init for preset={preset}, falling back to CPU: {exc}")
 
-        return build_cpu_ocr(preset), "cpu"
+        return build_cpu_ocr(), "cpu"
 
     def _get_ocr(self, preset: OCRPreset) -> tuple[PaddleOCRVL, str]:
         backend = "llama-cpp-server" if is_ocr_server_available() else "cpu"
@@ -101,9 +104,9 @@ class OCRService:
                 except Exception:
                     backend = "cpu"
                     cache_key = (backend, preset)
-                    self._ocr_instances[cache_key] = build_cpu_ocr(preset)
+                    self._ocr_instances[cache_key] = build_cpu_ocr()
             else:
-                self._ocr_instances[cache_key] = build_cpu_ocr(preset)
+                self._ocr_instances[cache_key] = build_cpu_ocr()
 
         return self._ocr_instances[cache_key], backend
 
@@ -117,7 +120,7 @@ class OCRService:
                 print(f"OCR server prediction failed for preset={preset}, falling back to CPU: {exc}")
                 cpu_key = ("cpu", preset)
                 if cpu_key not in self._ocr_instances:
-                    self._ocr_instances[cpu_key] = build_cpu_ocr(preset)
+                    self._ocr_instances[cpu_key] = build_cpu_ocr()
                 return list(self._ocr_instances[cpu_key].predict(image_path)), "cpu"
             raise
 
@@ -269,7 +272,7 @@ class OCRService:
             image_type=image_type,
             file_name=file_name,
             src=src or file_name,
-            ocr_text="\n".join(full_text_parts),
+            ocr_text="\n".join(full_text_parts) if full_text_parts else " ".join(res.get("rec_texts", [])),
             ocr_html="<br/>".join(full_html_parts) if full_html_parts else None,
             ocr_regions=ocr_regions,
             annotated_src=str(annotated_path),
