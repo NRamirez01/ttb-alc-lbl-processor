@@ -1,0 +1,122 @@
+/* style sheet for the printable summary */
+
+body {
+	font-family : arial,sans-serif;
+	color : #000000;
+}
+
+td {
+	font-family : arial,sans-serif;
+	color : #000000;
+}
+
+/* use th for column headers */
+th {
+	font-size : 8pt;
+}
+
+/* mouseover effect for text links */
+a:hover {
+	background-color : #FFFF99;
+}
+
+.smhead {
+	font-size : 8pt;
+	text-align : center;
+	font-weight : bold;
+}
+
+.medhead {
+	font-size : 10pt;
+	text-align : center;
+	font-weight : bold;
+}
+ 
+
+.lghead {
+	font-size : 12pt;
+	text-align : center;
+	font-weight : bold;
+}
+
+.sectionhead {
+	font-size : 10pt;
+	font-weight : bold;
+	text-align : center;
+}
+
+.signhead {
+	font-size : 10pt;
+	font-weight : bold;
+        margin-top : 4pt;
+        margin-bottom : 4pt;
+        margin-left : 4pt;
+        margin-right : 4pt;
+}
+
+.label {
+	font-size : 8pt;
+	font-weight : bold;
+        text-valign : top;
+
+}
+
+.boldlabelcenter {
+	font-size : 8pt;
+	font-weight : bold;
+	text-align : center;
+        text-valign : top;
+}
+
+.boldlabel {
+	font-size : 8pt;
+	font-weight : bold;
+        text-valign : top;
+}
+
+.smalldata {
+	font-size : 6pt;
+	font-weight : bold;
+        text-valign : middle;
+        vertical-align : middle;
+        margin-top : 4pt;
+        margin-bottom : 4pt;
+        margin-left : 4pt;
+        margin-right : 4pt;
+}
+
+.verysmalldata {
+	font-size : 4pt;
+	font-weight : bold;
+        text-valign : middle;
+        vertical-align : middle;
+        margin-top : 4pt;
+        margin-bottom : 4pt;
+        margin-left : 4pt;
+        margin-right : 4pt;
+}
+
+.data {
+	font-size : 8pt;
+        text-valign : middle;
+        vertical-align : middle;
+        margin-top : 4pt;
+        margin-bottom : 4pt;
+        margin-left : 4pt;
+        margin-right : 4pt;
+}
+
+TD { vertical-align : top; }
+
+.lgheadLeft {
+	font-size : 12pt;
+	text-align : left;
+	font-weight : bold;
+}
+
+.bodyLeftNice {
+	font-size : 10pt;
+	text-align : left;
+	font-weight : normal;
+}
+

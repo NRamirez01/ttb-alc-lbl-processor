@@ -1,4 +1,6 @@
+from io import BytesIO
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 from PIL import Image, ImageDraw
@@ -15,30 +17,12 @@ ocr = PaddleOCRVL(
     vl_rec_max_concurrency=2,
     use_doc_orientation_classify=True,
     use_doc_unwarping=True,
-    use_layout_detection=True, # Greatly changes speed
+    use_layout_detection=True,
     merge_layout_blocks=False,
     use_ocr_for_image_block=True,
     format_block_content=False,
 )
 
-
-# For crooked labels.
-# ocr = PaddleOCRVL(
-#     pipeline_version="v1.6",
-#     vl_rec_backend="llama-cpp-server",
-#     vl_rec_server_url="http://localhost:8080",
-#     vl_rec_max_concurrency=2,
-
-#     use_doc_orientation_classify=True,
-#     use_doc_unwarping=True,
-#     use_layout_detection=True,
-
-#     use_chart_recognition=False,
-#     use_seal_recognition=False,
-#     use_ocr_for_image_block=False,
-#     format_block_content=False,
-#     merge_layout_blocks=True,
-# )
 
 # llama-server `
 #   -m "C:\Users\nrami\Desktop\Code\ttb-alc-lbl-processor\models\PaddleOCR-VL-1.6-GGUF.gguf" `
@@ -92,16 +76,69 @@ class OCRService:
 
         res_obj = result[0]
         res_obj.print()
-        # res_obj.save_to_img(str(self.output_dir))
-        # res_obj.save_to_json(str(self.output_dir))
 
         res_dict = res_obj.json
-        image_result = self._build_image_result(image_path, res_dict)
+        image_result = self._build_image_result(
+            file_name=Path(image_path).name,
+            image_type=Path(image_path).suffix.lower().lstrip("."),
+            src=image_path,
+            paddle_result=res_dict,
+            image_path=image_path,
+            image_bytes=None,
+        )
 
         print(f"OCR processing time: {timer.elapsed_ms} ms")
         return image_result
 
-    def _build_image_result(self, image_path: str, paddle_result: dict[str, Any]) -> ImageResult:
+    def extract_text_from_bytes(self, image_bytes: bytes, file_name: str) -> ImageResult:
+        suffix = Path(file_name).suffix or ".png"
+
+        with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(image_bytes)
+            temp_path = Path(tmp.name)
+
+        try:
+            with Timer() as timer:
+                result = list(ocr.predict(str(temp_path)))
+
+            if not result:
+                return ImageResult(
+                    image_type=suffix.lower().lstrip("."),
+                    file_name=file_name,
+                    src=file_name,
+                    ocr_text="",
+                    ocr_regions=[],
+                    annotated_src=None,
+                )
+
+            res_obj = result[0]
+            res_obj.print()
+
+            res_dict = res_obj.json
+            image_result = self._build_image_result(
+                file_name=file_name,
+                image_type=suffix.lower().lstrip("."),
+                src=file_name,
+                paddle_result=res_dict,
+                image_path=None,
+                image_bytes=image_bytes,
+            )
+
+            print(f"OCR processing time: {timer.elapsed_ms} ms")
+            return image_result
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def _build_image_result(
+        self,
+        *,
+        file_name: str,
+        image_type: str,
+        src: str,
+        paddle_result: dict[str, Any],
+        image_path: str | None,
+        image_bytes: bytes | None,
+    ) -> ImageResult:
         res = paddle_result.get("res", {})
         parsing_res_list = res.get("parsing_res_list", [])
         layout_boxes = res.get("layout_det_res", {}).get("boxes", [])
@@ -140,13 +177,18 @@ class OCRService:
             if text:
                 full_text_parts.append(text)
 
-        annotated_path = self._annotated_output_path(image_path)
-        self._draw_annotated_image(image_path, ocr_regions, annotated_path)
+        annotated_path = self._annotated_output_path(file_name)
+        self._draw_annotated_image(
+            image_path=image_path,
+            image_bytes=image_bytes,
+            regions=ocr_regions,
+            output_path=annotated_path,
+        )
 
         return ImageResult(
-            image_type=Path(image_path).suffix.lower().lstrip("."),
-            file_name=Path(image_path).name,
-            src=image_path,
+            image_type=image_type,
+            file_name=file_name,
+            src=src,
             ocr_text="\n".join(full_text_parts),
             ocr_regions=ocr_regions,
             annotated_src=str(annotated_path),
@@ -154,18 +196,37 @@ class OCRService:
             height=res.get("height"),
         )
 
-    def _find_matching_layout_box(self, layout_boxes: list[dict[str, Any]], bbox: list[int], label: str) -> dict[str, Any] | None:
+    def _find_matching_layout_box(
+        self,
+        layout_boxes: list[dict[str, Any]],
+        bbox: list[int],
+        label: str,
+    ) -> dict[str, Any] | None:
         for box in layout_boxes:
             if box.get("coordinate") == bbox and box.get("label") == label:
                 return box
         return None
 
-    def _annotated_output_path(self, image_path: str) -> Path:
-        image_file = Path(image_path)
-        return self.output_dir / f"{image_file.stem}_annotated{image_file.suffix}"
+    def _annotated_output_path(self, file_name: str) -> Path:
+        image_file = Path(file_name)
+        suffix = image_file.suffix or ".png"
+        return self.output_dir / f"{image_file.stem}_annotated{suffix}"
 
-    def _draw_annotated_image(self, image_path: str, regions: list[OCRRegion], output_path: Path) -> None:
-        image = Image.open(image_path).convert("RGB")
+    def _draw_annotated_image(
+        self,
+        *,
+        image_path: str | None,
+        image_bytes: bytes | None,
+        regions: list[OCRRegion],
+        output_path: Path,
+    ) -> None:
+        if image_bytes is not None:
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
+        elif image_path is not None:
+            image = Image.open(image_path).convert("RGB")
+        else:
+            raise ValueError("Either image_path or image_bytes must be provided.")
+
         draw = ImageDraw.Draw(image)
 
         for region in regions:
@@ -199,5 +260,12 @@ class OCRService:
 #   --convert-links \
 #   --adjust-extension \
 #   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=16199001000074" \
+#   --no-check-certificate
+
+# wget -P 24248001000650 \
+#   --page-requisites \
+#   --convert-links \
+#   --adjust-extension \
+#   "https://ttbonline.gov/colasonline/viewColaDetails.do?action=publicFormDisplay&ttbid=24248001000650" \
 #   --no-check-certificate
 

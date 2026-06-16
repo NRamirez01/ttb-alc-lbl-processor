@@ -1,29 +1,61 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+class ProcessUrlRequest(BaseModel):
+    source_url: str
+
 class ApplicationData(BaseModel):
     ttb_id: str = ""
+    ct: str = ""
+    or_value: str = ""
+
+    rep_id_no: str = ""
+
     plant_registry_basic_permit_brewers_no: str = ""
     source_of_product: str = ""
+
     serial_number: str = ""
+    serial_year_1: str = ""
+    serial_year_2: str = ""
+    serial_number_1: str = ""
+    serial_number_2: str = ""
+    serial_number_3: str = ""
+    serial_number_4: str = ""
+
     type_of_product: str = ""
     brand_name: str = ""
     fanciful_name: str = ""
+
     name_and_address: str = ""
     mailing_address: str = ""
-    email_address: str = ""
-    grape_varietal: str = ""
+
     formula: str = ""
+    grape_varietal: str = ""
+    wine_appellation: str = ""
+
+    phone_number: str = ""
+    email_address: str = ""
+    fax_number: str = ""
+
+    type_of_application: str = ""
+    sale_in_state: str = ""
+    bottle_capacity: str = ""
+    resubmission_ttb_id: str = ""
+
+    container_notes: str = ""
+
+    date_of_application: str = ""
+    signature: str = ""
+    print_name_of_applicant: str = ""
+
+    date_issued: str = ""
+    authorized_signature: str = ""
+    qualifications: str = ""
+    expiration_date: str = ""
+
     net_contents: str = ""
     alcohol_content: str = ""
-    wine_appellation: str = ""
     wine_vintage_date: str = ""
-    phone_number: str = ""
-    fax_number: str = ""
-    date_of_application: str = ""
-    # signature: str = ""
-    print_name_of_applicant: str = ""
-    type_of_application: str = ""
 
 class OCRRegion(BaseModel):
     label: str

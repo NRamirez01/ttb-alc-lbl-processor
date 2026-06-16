@@ -8,3 +8,6 @@ uploads/
 dist/
 build/
 models/*
+*/node_modules/
+output/*
+static/*
