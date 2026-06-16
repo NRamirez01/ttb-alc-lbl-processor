@@ -1,21 +1,21 @@
 import json
 
-from fastapi import APIRouter, HTTPException, Query, Request
 import httpx
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.models.schemas import ApplicationData, ProcessResponse, ProcessUrlRequest
 from app.services.html_parser import parse_application_html
 from app.services.image_extractor import extract_ttb_assets_from_remote_html
+from app.services.label_rules import evaluate_label
 from app.services.label_validator import validate_application_against_ocr
 from app.services.normalizer import build_process_response
 from app.utils.text_normalization import clean_text
 from app.utils.timing import Timer
-from app.services.label_rules import evaluate_label
 
 router = APIRouter()
 
 
-def clean_application_data(application):
+def clean_application_data(application: ApplicationData) -> ApplicationData:
     for field_name in application.model_fields:
         value = getattr(application, field_name, "")
         if isinstance(value, str):
@@ -23,7 +23,7 @@ def clean_application_data(application):
     return application
 
 
-def populate_serial_fields(application):
+def populate_serial_fields(application: ApplicationData) -> ApplicationData:
     serial_value = "".join(ch for ch in (application.serial_number or "") if ch.isdigit())
 
     year_part = serial_value[:2]
@@ -39,6 +39,41 @@ def populate_serial_fields(application):
 
     application.serial_number = f"{year_part}-{number_part}" if year_part or number_part else ""
     return application
+
+
+def build_label_rule_results(application: ApplicationData, uploaded_images: list[dict]) -> list[dict]:
+    beverage_category = (application.type_of_product or "").strip().lower()
+    label_rule_results: list[dict] = []
+
+    for image_result in uploaded_images:
+        regions = image_result.get("ocr_regions") or []
+
+        if beverage_category:
+            label_rule_results.append(
+                {
+                    "file_name": image_result.get("file_name", ""),
+                    "image_type": image_result.get("image_type", ""),
+                    "result": evaluate_label(
+                        regions=regions,
+                        category=beverage_category,
+                        expected_brand_name=application.brand_name or application.fanciful_name or None,
+                    ),
+                }
+            )
+
+        label_rule_results.append(
+            {
+                "file_name": image_result.get("file_name", ""),
+                "image_type": image_result.get("image_type", ""),
+                "result": evaluate_label(
+                    regions=regions,
+                    category="warning",
+                ),
+            }
+        )
+
+    return label_rule_results
+
 
 @router.post("/process-url", response_model=ProcessResponse)
 async def process_application_url(
@@ -79,16 +114,23 @@ async def process_application_url(
                 if not (application.signature or "").strip():
                     application.signature = "Application was e-filed"
 
+                ocr_payload = [image.model_dump() for image in images]
+                validation = validate_application_against_ocr(application, ocr_payload)
+                label_rule_results = build_label_rule_results(application, ocr_payload)
+
                 result = build_process_response(
                     application=application,
                     images=images,
                     timing_ms=timer.elapsed_ms,
                 )
+                result.validation = validation
+                result.label_rule_results = label_rule_results
                 result.signature_image = signature_image
                 return result
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Failed to fetch application URL: {exc}")
+
 
 @router.post("/submit")
 async def submit_application_form(request: Request):
@@ -200,29 +242,8 @@ async def submit_application_form(request: Request):
                 uploaded_images.append(ocr_result.model_dump())
 
     validation = validate_application_against_ocr(application, uploaded_images)
+    label_rule_results = build_label_rule_results(application, uploaded_images)
 
-    beverage_category = str(form.get("beverage_category", "")).strip().lower()
-
-    label_rule_results = []
-    for image_result in uploaded_images:
-        regions = image_result.get("ocr_regions") or []
-
-        if beverage_category:
-            label_rule_results.append(
-                evaluate_label(
-                    regions=regions,
-                    category=beverage_category,
-                    expected_brand_name=application.brand_name or application.fanciful_name or None,
-                )
-            )
-
-        label_rule_results.append(
-            evaluate_label(
-                regions=regions,
-                category="warning",
-            )
-        )
-    breakpoint()
     return {
         "application": application.model_dump(),
         "label_images": uploaded_images,
