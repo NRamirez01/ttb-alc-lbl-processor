@@ -196,16 +196,6 @@ Expected response:
 {"status":"ok"}
 ```
 
-### OCR server health
-
-If your OCR server exposes a health endpoint, test it at:
-
-```text
-http://localhost:8080/health
-```
-
-If it does not, verify it is listening on port `8080` another way.
-
 ## How to use the app
 
 **Manual entry:** Fill out the application form, upload one or more label images, optionally choose an OCR preset, then click **Submit Application** to review OCR, validation, and compliance results.
