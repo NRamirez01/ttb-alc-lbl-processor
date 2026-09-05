@@ -1,3 +1,5 @@
+Site is currently offline due to as my computer is being used for other purposes, please reach out if you want to see it online. 
+
 # ttb-alc-lbl-processor
 
 A local-first OCR and label review app for TTB alcohol label processing. It extracts text from label images, compares application form values against OCR results, and runs label compliance checks.
